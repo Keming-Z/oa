@@ -1,76 +1,94 @@
-app.service('getsortedService', getsortedService);
+/**
+ * Get sorted array service
+ * @memberof PubmaticController
+ * @description
+ *   fetch data in real time and store locally.
+ *   return arrays according to user's requirements
+ */
+app.service('getsortedService', [
+    '$http', '$interval', 'sortService', 'filterService',
+    function($http, $interval, sortService, filterService) {
+        //private
+        const MINUTE = 60000;
+        var arrayUnsorted = [];
+        var intervalID;
 
-function getsortedService($http, $interval) {
-    const MINUTE = 60000;
-    var arrayUnsorted = [];
-    var arraySortedByUpdate = [];
-    var arraySortedByExecuted = [];
+        //export functions
+        var service = {
+            queryUpdates: queryUpdates,
+            startPolling: startPolling
+        };
+        return service;
 
-    var service = {
-        initData: initData,
-        queryUpdates: queryUpdates,
-        startPolling: startPolling
-    };
-    return service;
-
-    function getArray() {
-        var promise = $http.get('../../data/test.json').then(function(res) {
-            arrayUnsorted = res.data;
-        })
-        return promise;
-    }
-
-    function sortArray() {
-        var promise = getArray().then(function() {
-            arraySortedByUpdate = arrayUnsorted.slice();
-            arraySortedByUpdate.sort(function(a, b) {
-                return new Date(b.datetimes.updated) - new Date(a.datetimes.updated)
+        /*
+        @name
+            getArray
+        @description
+            $http gets data from API(/bidconfig) .
+        @return {promise}
+            promise returned by $http.get().then()
+        */
+        function getArray() {
+            var promise = $http.get('../../data/test.json').then(function(res) {
+                arrayUnsorted = res.data;
             })
-            arraySortedByExecuted = arrayUnsorted.slice();
-            arraySortedByExecuted.sort(function(a, b) {
-                return new Date(b.datetimes["last executed"]) - new Date(a.datetimes["last executed"])
-            })
-        })
-        return promise;
-    }
-
-    function initData() {
-        return sortArray().then(function() {
-            return {
-                "arraySortedByUpdate": arraySortedByUpdate,
-                "arraySortedByExecuted": arraySortedByExecuted
-            }
-        })
-    }
-
-    function startPolling() {
-        var intervalID = $interval(sortArray, MINUTE);
-    }
-
-    function stopPolling() {
-        $interval.cancel(intervalID);
-    }
-
-    function queryUpdates(size, tag) {
-        var resizeUpdate = arraySortedByUpdate.slice(0, +size);
-        var resizeExecuted = arraySortedByExecuted.slice(0, +size);
-        if(tag === '') {
-            return {
-                "arraySortedByUpdate": resizeUpdate,
-                "arraySortedByExecuted": resizeExecuted
-            }
-        } else {
-            var filterUpdate = resizeUpdate.filter(function(elem) {
-                return elem.tags.indexOf(tag) >= 0;
-            })
-            var filterExecuted = resizeExecuted.filter(function(elem) {
-                return elem.tags.indexOf(tag) >= 0;
-            })
-            return {
-                "arraySortedByUpdate": filterUpdate,
-                "arraySortedByExecuted": filterExecuted
-            }
+            return promise;
         }
 
+        /*
+        @name
+            startPolling
+        @description
+            Polling every minute, make raw data updates in real time. Create intervalID for canceling.
+        */
+        function startPolling() {
+            getArray();
+            intervalID = $interval(getArray, MINUTE);
+        }
+        // function stopPolling() {
+        //     $interval.cancel(intervalID);
+        // }
+
+        /*
+        @name
+            queryUpdates
+        @description
+            return sorted arrays in "size", and filtered by "tag"
+        @param {string, string}
+            customed size and tag
+        @return {object}
+            object containing two arrays
+        */
+        function queryUpdates(size, tag) {
+            //calling sortService to do sorting
+            var arraySorted = sortService.sortArray(arrayUnsorted);
+
+            var resizeUpdate = arraySorted.arraySortedByUpdate.slice(0, +size);
+            var resizeExecuted = arraySorted.arraySortedByExecuted.slice(0, +size);
+            if (tag === '') {
+                return {
+                    "arraySortedByUpdate": resizeUpdate,
+                    "arraySortedByExecuted": resizeExecuted
+                }
+            } else {
+                //calling filterService to do filter
+                var arrayFiltered = filterService.filterArray(resizeUpdate, resizeExecuted, tag);
+                return {
+                    "arraySortedByUpdate": arrayFiltered.filterUpdate,
+                    "arraySortedByExecuted": arrayFiltered.filterExecuted
+                }
+            }
+
+        }
+
+        // function initData() {
+        //     var promise = sortArray().then(function() {
+        //         return {
+        //             "arraySortedByUpdate": arraySortedByUpdate,
+        //             "arraySortedByExecuted": arraySortedByExecuted
+        //         }
+        //     })
+        //     return promise;
+        // }
     }
-}
+]);

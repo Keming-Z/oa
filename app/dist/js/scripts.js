@@ -34614,109 +34614,243 @@ var app = angular.module('pubmatic', [
     }
 ]);
 
-app.service('getsortedService', getsortedService);
-
-function getsortedService($http, $interval) {
-    const MINUTE = 60000;
-    var arrayUnsorted = [];
-    var arraySortedByUpdate = [];
-    var arraySortedByExecuted = [];
-
-    var service = {
-        initData: initData,
-        queryUpdates: queryUpdates,
-        startPolling: startPolling
-    };
-    return service;
-
-    function getArray() {
-        var promise = $http.get('../../data/test.json').then(function(res) {
-            arrayUnsorted = res.data;
-        })
-        return promise;
-    }
-
-    function sortArray() {
-        var promise = getArray().then(function() {
-            arraySortedByUpdate = arrayUnsorted.slice();
-            arraySortedByUpdate.sort(function(a, b) {
-                return new Date(b.datetimes.updated) - new Date(a.datetimes.updated)
-            })
-            arraySortedByExecuted = arrayUnsorted.slice();
-            arraySortedByExecuted.sort(function(a, b) {
-                return new Date(b.datetimes["last executed"]) - new Date(a.datetimes["last executed"])
-            })
-        })
-        return promise;
-    }
-
-    function initData() {
-        return sortArray().then(function() {
-            return {
-                "arraySortedByUpdate": arraySortedByUpdate,
-                "arraySortedByExecuted": arraySortedByExecuted
-            }
-        })
-    }
-
-    function startPolling() {
-        var intervalID = $interval(sortArray, MINUTE);
-    }
-
-    function stopPolling() {
-        $interval.cancel(intervalID);
-    }
-
-    function queryUpdates(size, tag) {
-        var resizeUpdate = arraySortedByUpdate.slice(0, +size);
-        var resizeExecuted = arraySortedByExecuted.slice(0, +size);
-        if(tag === '') {
-            return {
-                "arraySortedByUpdate": resizeUpdate,
-                "arraySortedByExecuted": resizeExecuted
-            }
-        } else {
-            var filterUpdate = resizeUpdate.filter(function(elem) {
-                return elem.tags.indexOf(tag) >= 0;
-            })
-            var filterExecuted = resizeExecuted.filter(function(elem) {
-                return elem.tags.indexOf(tag) >= 0;
-            })
-            return {
-                "arraySortedByUpdate": filterUpdate,
-                "arraySortedByExecuted": filterExecuted
-            }
-        }
-
-    }
-}
-
+/**
+ * Main controller
+ * @memberof ng-app pubmatic
+ * @description
+ *   queries for updates in realtime.
+ *   1)return array sorted by last updated.
+ *   2)return array sorted by last executed.
+ *   3)user can customise returned array size.
+ *   4)user can customise tags for filtering.
+ */
 app.controller('PubmaticController', [
     '$scope', 'getsortedService',
     function($scope, getsortedService) {
-        $scope.arraySortedByUpdate = [];
+        $scope.arraySortedByUpdated = [];
         $scope.arraySortedByExecuted = [];
-        $scope.size = 0;
-        $scope.tag = '';
+        $scope.sizeUpdated = 0;
+        $scope.sizeExecuted = 0;
+        $scope.tagUpdated = '';
+        $scope.tagExecuted = '';
 
-        //Long polling for updating in real time
-        getsortedService.startPolling();
-
-        $scope.init = function() {
-            getsortedService.initData().then(function(res) {
-                $scope.arraySortedByUpdate = res.arraySortedByUpdate;
-                $scope.arraySortedByExecuted = res.arraySortedByExecuted;
-            })
+        /*
+        @name
+            startPolling
+        @description
+            updates in realtime
+        */
+        $scope.startPolling = function() {
+            getsortedService.startPolling();
         }
 
-        $scope.getUpdates = function() {
+        /*
+        @name
+            getUpdated
+        @description
+            get array sorted by last updated time
+        */
+        $scope.getUpdated = function() {
             //validation, could do more work on that
-            if($scope.size < 0) {
+            if ($scope.sizeUpdated < 0) {
                 window.alert("please enter a size greater than 0")
             } else {
-                $scope.arraySortedByUpdate = getsortedService.queryUpdates($scope.size, $scope.tag).arraySortedByUpdate;
-                $scope.arraySortedByExecuted = getsortedService.queryUpdates($scope.size, $scope.tag).arraySortedByExecuted;
+                $scope.arraySortedByUpdated = getsortedService.queryUpdates($scope.sizeUpdated, $scope.tagUpdated).arraySortedByUpdate;
+            }
+        }
+
+        /*
+        @name
+            getExecuted
+        @description
+            get array by last executed time
+        */
+        $scope.getExecuted = function() {
+            if ($scope.sizeExecuted < 0) {
+                window.alert("please enter a size greater than 0")
+            } else {
+                $scope.arraySortedByExecuted = getsortedService.queryUpdates($scope.sizeExecuted, $scope.tagExecuted).arraySortedByExecuted;
             }
         }
     }
 ])
+
+/**
+ * Filter service
+ * @memberof getsortedService
+ * @description
+ *   filter array by tags
+ *   consider of scalability, extract and make a new service
+ */
+
+app.service('filterService', filterService);
+
+function filterService() {
+    //export functions
+    var service = {
+        filterArray: filterArray
+    }
+    return service;
+
+    /*
+    @name
+        filterArray
+    @description
+        filter array by tags
+    @param {array, array, string}
+        array sorted by update, array sorted by executed, tags for filtering
+    @return {object}
+        object containing two filtered arrays
+    */
+    function filterArray(resizeUpdate, resizeExecuted, tag) {
+        var filterUpdate = resizeUpdate.filter(function(elem) {
+            return elem.tags.indexOf(tag) >= 0;
+        })
+        var filterExecuted = resizeExecuted.filter(function(elem) {
+            return elem.tags.indexOf(tag) >= 0;
+        })
+        return {
+            "filterUpdate": filterUpdate,
+            "filterExecuted": filterExecuted
+        }
+    }
+}
+
+/**
+ * Get sorted array service
+ * @memberof PubmaticController
+ * @description
+ *   fetch data in real time and store locally.
+ *   return arrays according to user's requirements
+ */
+app.service('getsortedService', [
+    '$http', '$interval', 'sortService', 'filterService',
+    function($http, $interval, sortService, filterService) {
+        //private
+        const MINUTE = 60000;
+        var arrayUnsorted = [];
+        var intervalID;
+
+        //export functions
+        var service = {
+            queryUpdates: queryUpdates,
+            startPolling: startPolling
+        };
+        return service;
+
+        /*
+        @name
+            getArray
+        @description
+            $http gets data from API(/bidconfig) .
+        @return {promise}
+            promise returned by $http.get().then()
+        */
+        function getArray() {
+            var promise = $http.get('../../data/test.json').then(function(res) {
+                arrayUnsorted = res.data;
+            })
+            return promise;
+        }
+
+        /*
+        @name
+            startPolling
+        @description
+            Polling every minute, make raw data updates in real time. Create intervalID for canceling.
+        */
+        function startPolling() {
+            getArray();
+            intervalID = $interval(getArray, MINUTE);
+        }
+        // function stopPolling() {
+        //     $interval.cancel(intervalID);
+        // }
+
+        /*
+        @name
+            queryUpdates
+        @description
+            return sorted arrays in "size", and filtered by "tag"
+        @param {string, string}
+            customed size and tag
+        @return {object}
+            object containing two arrays
+        */
+        function queryUpdates(size, tag) {
+            //calling sortService to do sorting
+            var arraySorted = sortService.sortArray(arrayUnsorted);
+
+            var resizeUpdate = arraySorted.arraySortedByUpdate.slice(0, +size);
+            var resizeExecuted = arraySorted.arraySortedByExecuted.slice(0, +size);
+            if (tag === '') {
+                return {
+                    "arraySortedByUpdate": resizeUpdate,
+                    "arraySortedByExecuted": resizeExecuted
+                }
+            } else {
+                //calling filterService to do filter
+                var arrayFiltered = filterService.filterArray(resizeUpdate, resizeExecuted, tag);
+                return {
+                    "arraySortedByUpdate": arrayFiltered.filterUpdate,
+                    "arraySortedByExecuted": arrayFiltered.filterExecuted
+                }
+            }
+
+        }
+
+        // function initData() {
+        //     var promise = sortArray().then(function() {
+        //         return {
+        //             "arraySortedByUpdate": arraySortedByUpdate,
+        //             "arraySortedByExecuted": arraySortedByExecuted
+        //         }
+        //     })
+        //     return promise;
+        // }
+    }
+]);
+
+/**
+ * Sort service
+ * @memberof getsortedService
+ * @description
+ *   sort the raw data to sorted array
+ *   consider of scalability, potential complexity, extract out and make a new service
+ *   In reality it could be updating in difference of data. Data may be maintained in
+ *   other structures with better algorithms, for example heap, to reduce time.
+ */
+app.service('sortService', sortService);
+
+function sortService() {
+    //export functions
+    var service = {
+        sortArray: sortArray
+    }
+    return service;
+
+    /*
+    @name
+        sortArray
+    @description
+        sort array by updated time and executed time
+    @param {array}
+        unsorted array fetched from API
+    @return {object}
+        object containing two sorted arrays
+    */
+    function sortArray(arrayUnsorted) {
+        var arraySortedByUpdate = arrayUnsorted.slice();
+        arraySortedByUpdate.sort(function(a, b) {
+            return new Date(b.datetimes.updated) - new Date(a.datetimes.updated)
+        })
+        var arraySortedByExecuted = arrayUnsorted.slice();
+        arraySortedByExecuted.sort(function(a, b) {
+            return new Date(b.datetimes["last executed"]) - new Date(a.datetimes["last executed"])
+        })
+        return {
+            "arraySortedByUpdate": arraySortedByUpdate,
+            "arraySortedByExecuted": arraySortedByExecuted
+        }
+    }
+}

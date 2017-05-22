@@ -1,5 +1,10 @@
-<div ng-init="init()">
+<div ng-init="startPolling()">
     <div>
+        <form>
+            <input ng-model="sizeUpdated" placeholder="Please enter size" />
+            <input ng-model="tagUpdated" placeholder="Please enter one tag" />
+            <button ng-click="getUpdated()">Query Updates</button>
+        </form>
         <h4>Client Information(updated time)</h4>
         <table>
             <tr>
@@ -10,7 +15,7 @@
                 <th>Last Executed Time</th>
                 <th>Tags</th>
             </tr>
-            <tr ng-repeat="data in arraySortedByUpdate">
+            <tr ng-repeat="data in arraySortedByUpdated">
                 <td>{{ data.id }}</td>
                 <td>{{ data.name }}</td>
                 <td>{{ data.price }}</td>
@@ -19,6 +24,14 @@
                 <td>{{ data.tags }}</td>
             </tr>
         </table>
+    </div>
+
+    <div>
+        <form>
+            <input ng-model="sizeExecuted" placeholder="Please enter size" />
+            <input ng-model="tagExecuted" placeholder="Please enter one tag" />
+            <button ng-click="getExecuted()">Query Updates</button>
+        </form>
         <h4>Client Information(last executed time)</h4>
         <table>
             <tr>
@@ -39,10 +52,4 @@
             </tr>
         </table>
     </div>
-    <form>
-        <input ng-model="size" placeholder="Please enter size"/>
-        <input ng-model="tag" placeholder="Please enter tags"/>
-    </form>
-
-    <button ng-click="getUpdates()">Query Updates</button>
 </div>
