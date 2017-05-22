@@ -5,7 +5,6 @@ const browserSync = require('browser-sync').create();
 const scripts = require('./scripts');
 const styles = require('./styles');
 
-
 var devMode = false;
 
 gulp.task('css', function() {
@@ -34,8 +33,16 @@ gulp.task('html', function() {
         }));
 });
 
+gulp.task('json', function() {
+    gulp.src('./src/data/*.json')
+        .pipe(gulp.dest('./dist/data'))
+        .pipe(browserSync.reload({
+            stream: true
+        }));
+});
+
 gulp.task('build', function() {
-    gulp.start(['css', 'js', 'html']);
+    gulp.start(['css', 'js', 'html', 'json']);
 });
 
 gulp.task('browser-sync', function() {
@@ -50,7 +57,7 @@ gulp.task('browser-sync', function() {
 gulp.task('start', function() {
     devMode = true;
     gulp.start(['build', 'browser-sync']);
-    gulp.watch(['./app/styles/**/*.css'],['css']);
-    gulp.watch(['./app/js/**/*.js'], ['js']);
-    gulp.watch(['./app/views/**/*.html'], ['html']);
+    gulp.watch(['./src/styles/**/*.css'],['css']);
+    gulp.watch(['./src/js/**/*.js'], ['js']);
+    gulp.watch(['./src/views/**/*.html'], ['html']);
 });

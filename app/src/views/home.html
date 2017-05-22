@@ -1,0 +1,48 @@
+<div ng-init="init()">
+    <div>
+        <h4>Client Information(updated time)</h4>
+        <table>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Price</th>
+                <th>Updated Time</th>
+                <th>Last Executed Time</th>
+                <th>Tags</th>
+            </tr>
+            <tr ng-repeat="data in arraySortedByUpdate">
+                <td>{{ data.id }}</td>
+                <td>{{ data.name }}</td>
+                <td>{{ data.price }}</td>
+                <td>{{ data.datetimes.updated }}</td>
+                <td>{{ data.datetimes["last executed"] }}</td>
+                <td>{{ data.tags }}</td>
+            </tr>
+        </table>
+        <h4>Client Information(last executed time)</h4>
+        <table>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Price</th>
+                <th>Updated Time</th>
+                <th>Last Executed Time</th>
+                <th>Tags</th>
+            </tr>
+            <tr ng-repeat="data in arraySortedByExecuted">
+                <td>{{ data.id }}</td>
+                <td>{{ data.name }}</td>
+                <td>{{ data.price }}</td>
+                <td>{{ data.datetimes.updated }}</td>
+                <td>{{ data.datetimes["last executed"] }}</td>
+                <td>{{ data.tags }}</td>
+            </tr>
+        </table>
+    </div>
+    <form>
+        <input ng-model="size" placeholder="Please enter size"/>
+        <input ng-model="tag" placeholder="Please enter tags"/>
+    </form>
+
+    <button ng-click="getUpdates()">Query Updates</button>
+</div>

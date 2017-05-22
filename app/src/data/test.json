@@ -1,0 +1,54 @@
+[
+    {
+        "id": 1,
+        "name": "Client ABC",
+        "price": 12.50,
+        "datetimes": {
+            "updated": "2016-01-01T23:28:56.782Z",
+            "last executed": "2017-05-22T23:29:11.045Z"
+        },
+        "tags": [
+            "this",
+            "that",
+            "other"
+        ]
+    },
+    {
+        "id": 2,
+        "name": "Client DEF",
+        "price": 52.90,
+        "datetimes": {
+            "updated": "2017-02-01T23:28:56.782Z",
+            "last executed": "2017-04-01T23:29:11.045Z"
+        },
+        "tags": [
+            "this"
+        ]
+    },
+    {
+        "id": 3,
+        "name": "Client HIJ",
+        "price": 112.50,
+        "datetimes": {
+            "updated": "2016-01-01T23:28:56.982Z",
+            "last executed": "2016-04-01T23:29:11.145Z"
+        },
+        "tags": [
+            "this",
+            "other"
+        ]
+    },
+    {
+        "id": 4,
+        "name": "Client XYZ",
+        "price": 252.90,
+        "datetimes": {
+            "updated": "2017-01-01T23:38:56.782Z",
+            "last executed": "2017-04-01T23:29:11.045Z"
+        },
+        "tags": [
+            "this",
+            "that"
+        ]
+    }
+]

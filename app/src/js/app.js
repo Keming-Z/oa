@@ -2,12 +2,12 @@ var app = angular.module('pubmatic', [
     'ngRoute'
 ])
 .config([
-    'routeProvider',
+    '$routeProvider',
     function($routeProvider) {
         $routeProvider
             .when('/', {
                 templateUrl:'home.html',
-                controller:'HomeCtrl'
+                controller:'PubmaticController'
             });
     }
 ]);
